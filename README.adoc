@@ -1,0 +1,89 @@
+= Running a Local MongoDB Replica Set
+
+== Contents
+- Running a Local MongoDB Replica Set
+  - Contents
+  - Disclaimer
+  - What is it?
+  - Are there any prerequisites?
+  - How do I run the Replica Set?
+  - How do I access the MongoDB Shells for each Instance?
+  - How does it work?
+  - Connecting with URI
+
+== Disclaimer
+[WARNING]
+====
+This setup is purely for local development purposes.
+ 
+This setup should not be used for production applications as it was not built with that in mind.
+====
+
+== What is it?
+This docker-compose setup starts a local MongoDB replica set with 3 instances running on: 
+- mongo_db0:30001
+- mongo_db1:30002
+- mongo_db2:30003
+
+A MongoDB replica set is a group of MongoDB instances that maintain the same data set. It provides redundancy and high availability, and is the basis for all production deployments.
+
+== Are there any prerequisites? 
+* Docker
+* Docker Compose
+
+Docker is a tool designed to make it easier to create, deploy, and run applications by using containers. Containers allow a developer to package up an application with all of the parts it needs, such as libraries and other dependencies, and ship it all out as one package.
+
+Docker Compose is a tool for defining and running multi-container Docker applications. With Compose, you use a YAML file to configure your application's services. Then, with a single command, you create and start all the services from your configuration.
+
+== How do I run the Replica Set?
+Simply run the following command in the same directory as the docker-compose.yml file:
+[source,bash]
+----
+docker-compose up -d
+----
+
+This command will start the replica set in detached mode, meaning that the containers will run in the background.
+
+== How do I access the MongoDB Shells for each Instance?
+To access the MongoDB shell for each instance, use the following commands:
+[source,bash]
+----
+docker exec -it mongo_db0 sh -c "mongo --port 30001"
+docker exec -it mongo_db1 sh -c "mongo --port 30002"
+docker exec -it mongo_db2 sh -c "mongo --port 30003"
+----
+
+The MongoDB shell is an interactive JavaScript interface to MongoDB. You can use the shell to query and update data as well as perform administrative operations.
+
+== How does it work?
+- The setup starts three instances of MongoDB, each running in its own container.
+- The docker-compose.yml file configures the replica set named "cherry."
+- On the first instance (mongo_db0), the rs.initiate() command is automatically executed during startup using the health check mechanism.
+- The rs.initiate() command sets up the replica set with the following configuration:
+[source,mongodb]
+----
+rs.initiate(
+  {
+    _id : 'cherry',
+    members: [
+      { _id : 0, host : "mongo_db0:30001" },
+      { _id : 1, host : "mongo_db1:30002" },
+      { _id : 2, host : "mongo_db2:30003" }
+    ]
+  }
+)
+----
+
+- This causes all three instances to join the replica set named "cherry" and start communicating with each other.
+- One of the instances is elected to become the PRIMARY node, and the other two become SECONDARY nodes.
+- The PRIMARY node receives all write operations. Data written to the PRIMARY node is replicated to SECONDARY nodes.
+- The Docker health check configuration ensures the successful initialization of the replica set. More information can be found in the further reading links.
+
+== Connecting with URI
+To connect to the MongoDB replica set from your application, use the following connection URI:
+[source,mongodb]
+----
+mongodb://mongo_db0:30001,mongo_db1:30002,mongo_db2:30003/?replicaSet=cherry
+----
+
+This connection URI specifies that your application should connect to all three instances of the replica set. The `replicaSet` option specifies that your application should connect to a replica set named "cherry".
